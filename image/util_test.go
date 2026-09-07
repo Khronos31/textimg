@@ -30,10 +30,8 @@ func TestIsEmoji(t *testing.T) {
 	// 「ファイルがあっても例外なら false」を確かめるため。
 	emojiDir := createDummyEmojiFiles(t, 0x1f600, 0x2600, 0x00b6, 0x0023, 0x00a9)
 
-	// os.Stat はディレクトリに対しても成功するため、絵文字画像と同じ名前の
-	// ディレクトリがあると絵文字として扱われる。現在の挙動を固定しておく。
-	dirPath := filepath.Join(emojiDir, fmt.Sprintf("emoji_u%.4x.png", 0x1f601))
-	if err := os.Mkdir(dirPath, 0700); err != nil {
+	// 絵文字画像と同じ名前のディレクトリがあっても絵文字として扱わない。
+	if err := os.Mkdir(filepath.Join(emojiDir, fmt.Sprintf("emoji_u%.4x.png", 0x1f601)), 0700); err != nil {
 		t.Fatalf("ディレクトリの作成に失敗した: %v", err)
 	}
 
@@ -68,11 +66,11 @@ func TestIsEmoji(t *testing.T) {
 			wantPath: filepath.Join(emojiDir, "emoji_u00b6.png"),
 		},
 		{
-			desc:     "同名のディレクトリがあると絵文字として扱う",
+			desc:     "同名のディレクトリは絵文字として扱わない",
 			r:        0x1f601, // 😁
 			emojiDir: emojiDir,
-			wantOK:   true,
-			wantPath: dirPath,
+			wantOK:   false,
+			wantPath: "",
 		},
 		{
 			desc:     "画像ファイルが存在しない絵文字はfalseを返す",

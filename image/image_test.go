@@ -140,27 +140,37 @@ func TestNewImage(t *testing.T) {
 	}
 }
 
-// アニメーション有効時に AnimationLineCount が 0 だと、
-// imageHeight / (BaseHeight / AnimationLineCount) がゼロ除算になる。
-// 現在の挙動を固定しておく。
-func TestNewImage_AnimationLineCountZero(t *testing.T) {
-	p := newTestImageParam()
-	p.BaseHeight = 2
-	p.UseAnimation = true
-	p.AnimationLineCount = 0
+// AnimationLineCount が 0、または BaseHeight より大きいと除数が 0 になる。
+// ゼロ除算で落とさず、画像全体を1フレームとして扱う。
+func TestNewImage_AnimationLineCountOutOfRange(t *testing.T) {
+	tests := []struct {
+		desc               string
+		baseHeight         int
+		animationLineCount int
+	}{
+		{desc: "0のとき", baseHeight: 2, animationLineCount: 0},
+		{desc: "BaseHeightより大きいとき", baseHeight: 2, animationLineCount: 3},
+		{desc: "負のとき", baseHeight: 2, animationLineCount: -1},
+	}
 
-	assert.Panics(t, func() { NewImage(p) })
-}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			assert := assert.New(t)
+			p := newTestImageParam()
+			p.BaseHeight = tt.baseHeight
+			p.UseAnimation = true
+			p.AnimationLineCount = tt.animationLineCount
 
-// AnimationLineCount が BaseHeight より大きいと BaseHeight/AnimationLineCount が 0 になり、
-// これもゼロ除算になる。
-func TestNewImage_AnimationLineCountTooLarge(t *testing.T) {
-	p := newTestImageParam()
-	p.BaseHeight = 2
-	p.UseAnimation = true
-	p.AnimationLineCount = 3
+			var img *Image
+			assert.NotPanics(func() { img = NewImage(p) })
 
-	assert.Panics(t, func() { NewImage(p) })
+			// 画像全体が1フレームになる
+			err := img.Draw(token.Tokens{{Kind: token.KindText, Text: "a"}})
+			assert.NoError(err)
+			assert.Len(img.animationImages, 1)
+			assert.Equal(tt.baseHeight*testCharHeight, img.animationImages[0].Bounds().Dy())
+		})
+	}
 }
 
 func TestImage_Draw(t *testing.T) {

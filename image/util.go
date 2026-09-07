@@ -30,8 +30,8 @@ var (
 // 画像ファイルだった場合は当該画像ファイルのパスを返却する。
 func isEmoji(r rune, emojiDir string) (bool, string) {
 	path := fmt.Sprintf("%s/emoji_u%.4x.png", emojiDir, r)
-	_, err := os.Stat(path)
-	if err == nil && !isExceptionallyCodePoint(r) {
+	fi, err := os.Stat(path)
+	if err == nil && !fi.IsDir() && !isExceptionallyCodePoint(r) {
 		return true, path
 	}
 	return false, ""

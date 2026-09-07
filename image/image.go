@@ -59,7 +59,8 @@ type (
 )
 
 func init() {
-	// Unicode Neutral で定義されている絵文字(例: 👁)を幅2として扱う
+	// Unicode Neutral で定義されている絵文字(例: 👁)を幅2として扱う。
+	// この設定は EastAsianWidth が有効なときにのみ効果がある。
 	runewidth.DefaultCondition.StrictEmojiNeutral = false
 }
 
@@ -73,7 +74,17 @@ func NewImage(p *ImageParam) *Image {
 
 	var animationImageFlameHeight int
 	if p.UseAnimation {
-		animationImageFlameHeight = imageHeight / (p.BaseHeight / p.AnimationLineCount)
+		// AnimationLineCount が 0、または BaseHeight より大きいと除数が 0 になり
+		// ゼロ除算で落ちる。その場合は画像全体を1フレームとして扱う。
+		lines := 0
+		if p.AnimationLineCount > 0 {
+			lines = p.BaseHeight / p.AnimationLineCount
+		}
+		if lines > 0 {
+			animationImageFlameHeight = imageHeight / lines
+		} else {
+			animationImageFlameHeight = imageHeight
+		}
 	}
 
 	image := newImage(imageWidth, imageHeight)
